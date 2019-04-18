@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyparser = require('body-parser');
+const morgan = require('morgan');
 
 const posts = require('./routes/api/posts');
 const profile = require('./routes/api/profile');
@@ -12,6 +13,12 @@ const app = express();
 // body parser middleware
 app.use(bodyparser.urlencoded({ extended: false }));
 app.use(bodyparser.json());
+
+app.use(
+  morgan(process.env.NODE_ENV === 'production' ? 'common' : 'dev', {
+    skip: (req, res) => process.env.NODE_ENV === 'test',
+  }),
+);
 
 // DB COnfig
 // Connect to MongoDB
