@@ -1,7 +1,10 @@
 const express = require('express');
 const gravatar = require('gravatar');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const User = require('../../models/User');
+
+const { JWT_SECRET } = require('../../config/keys');
 
 const router = express.Router();
 
@@ -14,20 +17,21 @@ router.get('/test', (req, res) => res.json({ msg: 'users works' }));
 // @desc  register user
 // @access Public
 router.post('/register', (req, res) => {
-  User.findOne({ email: req.body.email }).then((user) => {
+  const { name, email, password } = req.body;
+  User.findOne({ email }).then((user) => {
     if (user) {
       return res.status(400).json({ email: 'Email already exists' });
     }
-    const avatar = gravatar.url(req.body.email, {
+    const avatar = gravatar.url(email, {
       s: '200',
       r: 'pg',
       d: 'mm',
     });
     const newUser = new User({
-      name: req.body.name,
-      email: req.body.email,
+      name,
+      email,
       avatar,
-      password: req.body.password,
+      password,
     });
 
     bcrypt.genSalt(10, (err, salt) => {
@@ -56,7 +60,13 @@ router.post('/login', (req, res) => {
     }
     bcrypt.compare(password, user.password).then((isMatch) => {
       if (isMatch) {
-        res.json({ msg: 'success' });
+        // User matched
+        const { id, name, avatar } = user;
+        const payload = { id, name, avatar };
+        // Sign token
+        jwt.sign(payload, JWT_SECRET, { expiresIn: 3600 }, (err, token) => {
+          res.json({ success: true, token: `Bearer ${token}` });
+        });
       } else {
         return res.status(400).json({ password: 'password incorrect' });
       }
